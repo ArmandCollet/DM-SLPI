@@ -34,7 +34,40 @@ void GradPasOptimal (const SparseMatrix<double> A, const VectorXd b, const Vecto
   {
     cout<<"Tolérance non atteinte: "<<endl;
   }
-  cout <<x(0)<<endl;
+
+}
+
+//sauvegarde les normes dans un fichier si on donne le nom du fichier
+void GradPasOptimal (const SparseMatrix<double> A, const VectorXd b, const VectorXd x0, const double epsilon, const int kmax, VectorXd & x, std::string file)
+{
+  //Initialisation
+  int k=0;
+  VectorXd r(b.size()), z(b.size());
+  double alpha;
+  ofstream flux;
+  flux.open(file);
+  flux << "% itération k  ;  norme r"<<endl;
+  r=b-A*x0;
+  x=x0;
+  //Boucle
+  while((r.norm()>epsilon) && (k<=kmax))
+  {
+    z = A*r;
+    alpha = r.dot(r) / z.dot(r);
+    x = x + alpha*r;
+    r = r - alpha*z;
+    k+=1;
+    flux << k << " " << r <<endl;
+  }
+  flux.close();
+  cout << "r="<<r.norm() << endl;
+  cout<<"Nombre d'itérations ="<<k<<endl;
+
+  if (k>kmax)
+  {
+    cout<<"Tolérance non atteinte: "<<endl;
+  }
+
 
 }
 
@@ -49,7 +82,6 @@ void GradPasOptimal (const SparseMatrix<double> A, const VectorXd b, const Vecto
 //-------------------------------------------------------Résidu minimium--------------------------------------------
 
 void ResMin (const SparseMatrix<double> A,const VectorXd b, const VectorXd x0,const double epsilon,const int kmax, VectorXd & x)
-
 {
   //Initialisation
   int k=0;
@@ -67,6 +99,38 @@ void ResMin (const SparseMatrix<double> A,const VectorXd b, const VectorXd x0,co
     r = r - alpha*z;
     k+=1;
   }
+  cout<<"r ="<<r.norm()<<endl;
+  cout<<"Nombre d'itérations ="<<k<<endl;
+
+  if (k>kmax)
+  {
+    cout<<"Tolérance non atteinte: "<<endl;
+  }
+}
+//sauvegarde les normes dans un fichier si on donne le nom du fichier
+void ResMin (const SparseMatrix<double> A,const VectorXd b, const VectorXd x0,const double epsilon,const int kmax, VectorXd & x, std::string file)
+{
+  //Initialisation
+  int k=0;
+  VectorXd r(b.size()),z(b.size());
+  double alpha;
+  ofstream flux;
+  flux.open(file);
+  flux << "% itération k  ;  norme r"<<endl;
+  r=b-A*x0;
+  x=x0;
+
+  //Boucle
+  while ((r.norm()>epsilon) && (k<=kmax))
+  {
+    z = A*r;
+    alpha = r.dot(z) / z.dot(z);
+    x = x + alpha*r;
+    r = r - alpha*z;
+    k+=1;
+    flux << k << " " << r <<endl;
+  }
+  flux.close();
   cout<<"r ="<<r.norm()<<endl;
   cout<<"Nombre d'itérations ="<<k<<endl;
 
@@ -302,7 +366,6 @@ void ResMin_cond_droite_flex(Eigen::SparseMatrix<double> A, const Eigen::VectorX
 
 
 
-
 //-------------------------------------GMRes-----------------------------------------------------
 
 
@@ -354,112 +417,6 @@ std::vector<Eigen::MatrixXd> Arnoldi(const Eigen::SparseMatrix<double> A, Eigen:
   return HmVm;
 }
 
-std::vector<Eigen::MatrixXd> Arnoldi_2(const Eigen::SparseMatrix<double> A,const Eigen::SparseMatrix<double> L,const Eigen::SparseMatrix<double> U, Eigen::VectorXd & v, const int m)
-{
-  //Déclaration des variables
-
-  MatrixXd Vm_1(v.size(),m+1); Vm_1 = MatrixXd::Constant(v.size(),m+1,0.);
-  MatrixXd Vm(v.size(),m);   MatrixXd Zm(v.size(),m);
-  MatrixXd Hm(m,m);
-  MatrixXd Hm_barre(m+1,m); Hm_barre = MatrixXd::Constant(m+1,m,0.);
-  MatrixXd w(v.size(),m);VectorXd wj0(w.rows()), wj_intermediaire(w.rows());
-  vector<Eigen::MatrixXd> HmVm;
-
-
-
-
-  //Initialisation
-  Vm_1.col(0)=v/v.norm();
-
-  //Boucles
-  for (int j=0; j<m;j++)
-  {
-    wj_intermediaire = L.triangularView<Lower>().solve(Vm_1.col(j));
-    wj0 = U.triangularView<Upper>().solve(wj_intermediaire);
-    w.col(j)=A*wj0;
-    Zm.col(j)=wj0;
-    //w.col(j)=A*Vm_1.col(j);
-    for (int i=0;i<=j;i++)
-    {
-      Hm_barre(i,j)=w.col(j).dot(Vm_1.col(i));
-      w.col(j)=w.col(j)-Hm_barre(i,j)*Vm_1.col(i);
-    }
-    Hm_barre(j+1,j)=(w.col(j)).norm();
-    if (Hm_barre(j+1,j)==0.)
-    break;
-    Vm_1.col(j+1)=w.col(j)/Hm_barre(j+1,j);
-
-  }
-
-  //Extraction de Vm et Hm à partie de Vm+1 et Hm_barre
-  for(int i=0;i<m;i++)
-  {
-    Vm.col(i)=Vm_1.col(i);Hm.row(i)=Hm_barre.row(i);
-  }
-  //cout<<Vm.transpose()*Vm<<endl;
-  //Remplissage du vecteur contenant Hm, Hm_barre, Vm et Vm+1
-  HmVm.push_back(Hm);
-  HmVm.push_back(Hm_barre);
-  HmVm.push_back(Vm);
-  HmVm.push_back(Vm_1);
-  HmVm.push_back(Zm);
-
-  return HmVm;
-}
-
-
-std::vector<Eigen::MatrixXd> Arnoldi_3(const Eigen::SparseMatrix<double> A, Eigen::VectorXd & v, const int m)
-{
-  //Déclaration des variables
-
-  MatrixXd Vm_1(v.size(),m+1); Vm_1 = MatrixXd::Constant(v.size(),m+1,0.);
-  MatrixXd Vm(v.size(),m);   MatrixXd Zm(v.size(),m);
-  MatrixXd Hm(m,m);
-  MatrixXd Hm_barre(m+1,m); Hm_barre = MatrixXd::Constant(m+1,m,0.);
-  MatrixXd w(v.size(),m);VectorXd wj0(w.rows()), wj_intermediaire(w.rows()), wj(w.rows());
-  vector<Eigen::MatrixXd> HmVm;
-
-
-
-
-  //Initialisation
-  Vm_1.col(0)=v/v.norm();
-
-  //Boucles
-  for (int j=0; j<m;j++)
-  {
-    GMRes (A, Vm_1.col(j), wj0, 0.000001, 10, wj, 5);
-    w.col(j)=A*wj;
-    wj0=wj;
-    Zm.col(j)=wj0;
-    //w.col(j)=A*Vm_1.col(j);
-    for (int i=0;i<=j;i++)
-    {
-      Hm_barre(i,j)=w.col(j).dot(Vm_1.col(i));
-      w.col(j)=w.col(j)-Hm_barre(i,j)*Vm_1.col(i);
-    }
-    Hm_barre(j+1,j)=(w.col(j)).norm();
-    if (Hm_barre(j+1,j)==0.)
-    break;
-    Vm_1.col(j+1)=w.col(j)/Hm_barre(j+1,j);
-
-  }
-
-  //Extraction de Vm et Hm à partie de Vm+1 et Hm_barre
-  for(int i=0;i<m;i++)
-  {
-    Vm.col(i)=Vm_1.col(i);Hm.row(i)=Hm_barre.row(i);
-  }
-  //cout<<Vm.transpose()*Vm<<endl;
-  //Remplissage du vecteur contenant Hm, Hm_barre, Vm et Vm+1
-  HmVm.push_back(Hm);
-  HmVm.push_back(Hm_barre);
-  HmVm.push_back(Vm);
-  HmVm.push_back(Vm_1);
-  HmVm.push_back(Zm);
-
-  return HmVm;
-}
 //Givens honnête
 void GivensOpt(const Eigen::MatrixXd A, Eigen::MatrixXd & Q, Eigen::MatrixXd & R)
 {
@@ -569,8 +526,118 @@ void GMRes(const Eigen::SparseMatrix<double> A, const Eigen::VectorXd b, const E
 
 }
 
+//sauvegarde les normes dans un fichier si on donne le nom du fichier
+void GMRes(const Eigen::SparseMatrix<double> A, const Eigen::VectorXd b, const Eigen::VectorXd x0, const double epsilon, const int kmax, Eigen::VectorXd & x, const int m, std::string file)
+{
+  //Initialisation
+  int k=0;
+  VectorXd r(b.size()); r=b-A*x0;
+  VectorXd y(m);
+  double beta; beta=r.norm(); double gamma;
+  MatrixXd Hm(m,m); MatrixXd Vm(b.size(),m);MatrixXd Hm_barre(m+1,m);MatrixXd Vm_1(b.size(),m+1);
+  vector<Eigen::MatrixXd> HmVm;
+  Eigen::MatrixXd Qm(m,m); Eigen::MatrixXd Rm(m,m); Eigen::MatrixXd Qm_barre(m+1,m+1);Eigen::MatrixXd Rm_barre(m+1,m);
+  Eigen::VectorXd gm_barre(m+1);Eigen::VectorXd gm(m);
+
+  ofstream flux;
+  flux.open(file);
+  flux << "% itération k  ;  norme r"<<endl;
+
+  x=x0;
+
+  while ((beta>epsilon) && (k<=kmax))
+  {
+    HmVm = Arnoldi(A,r,m);
+    Hm = HmVm[0]; Vm = HmVm[2]; Hm_barre = HmVm[1]; Vm_1 = HmVm[3];
+    //cout<<"VmT*Vm="<<endl;
+    //cout<<Vm.transpose()*Vm<<endl;
+
+    //Givens(Hm,Qm,Rm);
+    GivensOpt(Hm_barre,Qm_barre,Rm_barre);
+
+    gm_barre = beta*(Qm_barre.transpose()).col(0);
+    gamma = gm_barre[m];
+
+    for(int i=0;i<m;i++)
+    {
+      Rm.row(i) = Rm_barre.row(i); gm.row(i) = gm_barre.row(i);
+    }
+
+    resol_syst_triang_sup(Rm, y, gm);
+
+    x += Vm * y;
+
+    r = b-A*x;
+    //r = gamma*Vm_1*((Qm_barre.transpose()).col(m));
+
+    //beta = abs(gamma);
+    beta = r.norm();
+    k+=1;
+    flux << k << " " << r <<endl;
+  }
+  flux.close();
+  cout<<"r ="<<r.norm()<<endl;
+  cout<<"Nombre d'itérations ="<<k<<endl;
+  if (k>kmax)
+  {
+    cout<<"Tolérance non atteinte: "<<endl;
+  }
+
+}
 
 //---------------------------------GMRes préconditionné-------------------------------------------------//
+std::vector<Eigen::MatrixXd> Arnoldi_2(const Eigen::SparseMatrix<double> A,const Eigen::SparseMatrix<double> L,const Eigen::SparseMatrix<double> U, Eigen::VectorXd & v, const int m)
+{
+  //Déclaration des variables
+
+  MatrixXd Vm_1(v.size(),m+1); Vm_1 = MatrixXd::Constant(v.size(),m+1,0.);
+  MatrixXd Vm(v.size(),m);   MatrixXd Zm(v.size(),m);
+  MatrixXd Hm(m,m);
+  MatrixXd Hm_barre(m+1,m); Hm_barre = MatrixXd::Constant(m+1,m,0.);
+  MatrixXd w(v.size(),m);VectorXd wj0(w.rows()), wj_intermediaire(w.rows());
+  vector<Eigen::MatrixXd> HmVm;
+
+
+
+
+  //Initialisation
+  Vm_1.col(0)=v/v.norm();
+
+  //Boucles
+  for (int j=0; j<m;j++)
+  {
+    wj_intermediaire = L.triangularView<Lower>().solve(Vm_1.col(j));
+    wj0 = U.triangularView<Upper>().solve(wj_intermediaire);
+    w.col(j)=A*wj0;
+    Zm.col(j)=wj0;
+    //w.col(j)=A*Vm_1.col(j);
+    for (int i=0;i<=j;i++)
+    {
+      Hm_barre(i,j)=w.col(j).dot(Vm_1.col(i));
+      w.col(j)=w.col(j)-Hm_barre(i,j)*Vm_1.col(i);
+    }
+    Hm_barre(j+1,j)=(w.col(j)).norm();
+    if (Hm_barre(j+1,j)==0.)
+    break;
+    Vm_1.col(j+1)=w.col(j)/Hm_barre(j+1,j);
+
+  }
+
+  //Extraction de Vm et Hm à partie de Vm+1 et Hm_barre
+  for(int i=0;i<m;i++)
+  {
+    Vm.col(i)=Vm_1.col(i);Hm.row(i)=Hm_barre.row(i);
+  }
+  //cout<<Vm.transpose()*Vm<<endl;
+  //Remplissage du vecteur contenant Hm, Hm_barre, Vm et Vm+1
+  HmVm.push_back(Hm);
+  HmVm.push_back(Hm_barre);
+  HmVm.push_back(Vm);
+  HmVm.push_back(Vm_1);
+  HmVm.push_back(Zm);
+
+  return HmVm;
+}
 
 void GMRes_preconditionne(const Eigen::SparseMatrix<double> A, const Eigen::VectorXd b, const Eigen::VectorXd x0, const double epsilon, const int kmax, Eigen::VectorXd & x, const int m)
 {
@@ -653,8 +720,58 @@ void GMRes_preconditionne(const Eigen::SparseMatrix<double> A, const Eigen::Vect
 
 
 //----------------------------------------Flex GMRes standard--------------------------------------------------------//
+std::vector<Eigen::MatrixXd> Arnoldi_3(const Eigen::SparseMatrix<double> A, Eigen::VectorXd & v, const int m)
+{
+  //Déclaration des variables
+
+  MatrixXd Vm_1(v.size(),m+1); Vm_1 = MatrixXd::Constant(v.size(),m+1,0.);
+  MatrixXd Vm(v.size(),m);   MatrixXd Zm(v.size(),m);
+  MatrixXd Hm(m,m);
+  MatrixXd Hm_barre(m+1,m); Hm_barre = MatrixXd::Constant(m+1,m,0.);
+  MatrixXd w(v.size(),m);VectorXd wj0(w.rows()), wj_intermediaire(w.rows()), wj(w.rows());
+  vector<Eigen::MatrixXd> HmVm;
 
 
+
+
+  //Initialisation
+  Vm_1.col(0)=v/v.norm();
+
+  //Boucles
+  for (int j=0; j<m;j++)
+  {
+    GMRes (A, Vm_1.col(j), wj0, 0.000001, 10, wj, 5);
+    w.col(j)=A*wj;
+    wj0=wj;
+    Zm.col(j)=wj0;
+    //w.col(j)=A*Vm_1.col(j);
+    for (int i=0;i<=j;i++)
+    {
+      Hm_barre(i,j)=w.col(j).dot(Vm_1.col(i));
+      w.col(j)=w.col(j)-Hm_barre(i,j)*Vm_1.col(i);
+    }
+    Hm_barre(j+1,j)=(w.col(j)).norm();
+    if (Hm_barre(j+1,j)==0.)
+    break;
+    Vm_1.col(j+1)=w.col(j)/Hm_barre(j+1,j);
+
+  }
+
+  //Extraction de Vm et Hm à partie de Vm+1 et Hm_barre
+  for(int i=0;i<m;i++)
+  {
+    Vm.col(i)=Vm_1.col(i);Hm.row(i)=Hm_barre.row(i);
+  }
+  //cout<<Vm.transpose()*Vm<<endl;
+  //Remplissage du vecteur contenant Hm, Hm_barre, Vm et Vm+1
+  HmVm.push_back(Hm);
+  HmVm.push_back(Hm_barre);
+  HmVm.push_back(Vm);
+  HmVm.push_back(Vm_1);
+  HmVm.push_back(Zm);
+
+  return HmVm;
+}
 
 void GMRes_flex(const Eigen::SparseMatrix<double> A, const Eigen::VectorXd b, const Eigen::VectorXd x0, const double epsilon, const int kmax, Eigen::VectorXd & x, const int m)
 {
@@ -695,7 +812,7 @@ void GMRes_flex(const Eigen::SparseMatrix<double> A, const Eigen::VectorXd b, co
     x += Zm*y;
 
     r = b-A*x;
-    
+
     beta = r.norm();cout<<"Iteration GMRes flex"<<beta<<endl;
 
     k+=1;
@@ -765,8 +882,6 @@ SparseMatrix <double>  Lecture_Matrice_A (string fichier)
   return A;
 }
 
-
-
 VectorXd Lecture_Matrice_b(string fichier)
 {
   cout << "Lecture du fichier : "<<fichier<<endl;
@@ -797,10 +912,6 @@ VectorXd Lecture_Matrice_b(string fichier)
   flux_b.close();
   return b;
 }
-
-
-
-
 
 SparseMatrix <double>  Lecture_Matrice_A_2 (string fichier)
 {

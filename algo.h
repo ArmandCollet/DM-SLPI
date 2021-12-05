@@ -8,10 +8,12 @@
 //------------------------------ Gradient à Pas Optimal---------------------------------------
 
 void GradPasOptimal(const Eigen::SparseMatrix<double> A, const Eigen::VectorXd b, const Eigen::VectorXd x0, const double epsilon,const int kmax, Eigen:: VectorXd & x);
+void GradPasOptimal (const Eigen::SparseMatrix<double> A, const Eigen::VectorXd b, const Eigen::VectorXd x0, const double epsilon, const int kmax, Eigen::VectorXd & x, std::string file);
 
 //------------------------------Résidus minimum------------------------------------------------
 
 void ResMin(const Eigen::SparseMatrix<double> A, const Eigen::VectorXd b, const Eigen::VectorXd x0, const double epsilon, const int kmax, Eigen::VectorXd & x);
+void ResMin (const Eigen::SparseMatrix<double> A,const Eigen::VectorXd b, const Eigen::VectorXd x0, const double epsilon, const int kmax, Eigen::VectorXd & x, std::string file);
 
 void ResMin_cond_gauche(Eigen::SparseMatrix<double> A, const Eigen::VectorXd b, const Eigen::VectorXd x0, const double epsilon, const int kmax, Eigen::VectorXd & x);
 
@@ -23,6 +25,7 @@ void ResMin_cond_droite_flex(Eigen::SparseMatrix<double> A, const Eigen::VectorX
 //-------------------------------GMRes--------------------------------------------------------
 
 void GMRes(const Eigen::SparseMatrix<double> A, const Eigen::VectorXd b, const Eigen::VectorXd x0, const double epsilon, const int kmax, Eigen::VectorXd & x, const int m);
+void GMRes(const Eigen::SparseMatrix<double> A, const Eigen::VectorXd b, const Eigen::VectorXd x0, const double epsilon, const int kmax, Eigen::VectorXd & x, const int m, std::string file);
 
 void GMRes_preconditionne(const Eigen::SparseMatrix<double> A, const Eigen::VectorXd b, const Eigen::VectorXd x0, const double epsilon, const int kmax, Eigen::VectorXd & x, const int m);
 
