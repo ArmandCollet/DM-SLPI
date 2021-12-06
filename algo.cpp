@@ -46,7 +46,7 @@ void GradPasOptimal (const SparseMatrix<double> A, const VectorXd b, const Vecto
   double alpha;
   ofstream flux;
   flux.open(file);
-  flux << "% itération k  ;  norme r"<<endl;
+  flux << "# itération k  ;  norme r"<<endl;
   r=b-A*x0;
   x=x0;
   //Boucle
@@ -57,7 +57,7 @@ void GradPasOptimal (const SparseMatrix<double> A, const VectorXd b, const Vecto
     x = x + alpha*r;
     r = r - alpha*z;
     k+=1;
-    flux << k << " " << r <<endl;
+    flux << k << " " << r.norm() <<endl;
   }
   flux.close();
   cout << "r="<<r.norm() << endl;
@@ -116,7 +116,7 @@ void ResMin (const SparseMatrix<double> A,const VectorXd b, const VectorXd x0,co
   double alpha;
   ofstream flux;
   flux.open(file);
-  flux << "% itération k  ;  norme r"<<endl;
+  flux << "# itération k  ;  norme r"<<endl;
   r=b-A*x0;
   x=x0;
 
@@ -128,7 +128,7 @@ void ResMin (const SparseMatrix<double> A,const VectorXd b, const VectorXd x0,co
     x = x + alpha*r;
     r = r - alpha*z;
     k+=1;
-    flux << k << " " << r <<endl;
+    flux << k << " " << r.norm() <<endl;
   }
   flux.close();
   cout<<"r ="<<r.norm()<<endl;
@@ -541,7 +541,7 @@ void GMRes(const Eigen::SparseMatrix<double> A, const Eigen::VectorXd b, const E
 
   ofstream flux;
   flux.open(file);
-  flux << "% itération k  ;  norme r"<<endl;
+  flux << "# itération k  ;  norme r"<<endl;
 
   x=x0;
 
@@ -573,7 +573,7 @@ void GMRes(const Eigen::SparseMatrix<double> A, const Eigen::VectorXd b, const E
     //beta = abs(gamma);
     beta = r.norm();
     k+=1;
-    flux << k << " " << r <<endl;
+    flux << k << " " << r.norm() <<endl;
   }
   flux.close();
   cout<<"r ="<<r.norm()<<endl;
@@ -959,4 +959,3 @@ SparseMatrix <double>  Lecture_Matrice_A_2 (string fichier)
     }
   flux_A.close();
   return A;
-}

@@ -287,13 +287,14 @@ int main()
     case 4:
     {// Courbese de la Q1
       int n;
-      vector<int> = N{10, 50, 100, 500, 1000, 5000}; // A changer si vous voulez
-      double epsilon = 0.000001;
+      vector<int> N = {10, 50, 100, 500, 1000}; // A changer si vous voulez
+      double epsilon = pow(10,-15);
       int    kmax    = 1000;
       int    m       = 5;
-      for (int i_n = 0 ; i_n<N.size() ; i_n++)
+       for (int i_n = 0 ; i_n<N.size() ; i_n++)
       {
         n=N[i_n];
+	cout << endl << "Matrice de taille "<< n << endl;
         SparseMatrix<double> An(n,n), C(n,n), In(n,n);
         MatrixXd             Bn(n,n), Bnn(n,n);
         VectorXd             x0(n), x(n), b(n);
@@ -308,10 +309,14 @@ int main()
         In.setIdentity();
         An=In+1./pow(n,2)*C.transpose()*C;
 
+	cout <<"Gradient à pas optimal : "<<endl;
         GradPasOptimal (An,b,x0,epsilon,kmax,x, "GPO_"+to_string(n)+".dat");
+	cout << "Résidu minimum : "<<endl;
         ResMin (An,b,x0,epsilon,kmax,x, "RM_"+to_string(n)+".dat" );
+	cout << "GMRes" <<endl;
         GMRes  (An,b,x0,epsilon,kmax,x,m,"GMR_"+to_string(n)+".dat");
 
+	break;
       }
     }
 
@@ -337,29 +342,38 @@ int main()
         x0(i)=1.;
       }
       //          Calcul        //
+
+      cout <<"Gradient à pas optimal : "<<endl;
       GradPasOptimal(An,bn,x0,epsilon,kmax,x,"GPO_smt.dat");
+      cout << "Résidu minimum : "<<endl;
       ResMin(An,bn,x0,epsilon,kmax,x,"RM_dmt.dat");
+      cout << "GMRes" <<endl;
       GMRes(An,bn,x0,epsilon,kmax,x,m,"GMR_smt.dat");
 
       //----------Matrice météo st Venant--------------------------------------
       //   Lecture de la matrice   //
       An=Lecture_Matrice_A_2("./shallow_water1/shallow_water1.mtx");
-      bn.resize(An.rows());
+      cout << "An.row()" << An.rows()<< endl;
+      /*bn.resize(An.rows());
       x0.resize(An.rows());
       x.resize(An.rows());
       bn.setRandom(); // Faudrait plutot bn.setZero()  -Arthur-
-
+      */
       for (int i=0; i<An.rows();i++)
       {
         x0(i)=1.;
       }
 
       //          Calcul        //
-      GradPasOptimal(An,bn,x0,epsilon,kmax,x, "GPO_sw1.dat");
-      ResMin(An,bn,x0,epsilon,kmax,x, "RM_sw1.dat");
-      GMRes(An,bn,x0,epsilon,kmax,x,m, "GMR_sw1.dat");
 
-  }
+      cout <<"Gradient à pas optimal : "<<endl;
+      GradPasOptimal(An,bn,x0,epsilon,kmax,x, "GPO_sw1.dat");
+      cout << "Résidu minimum : "<<endl;
+      ResMin(An,bn,x0,epsilon,kmax,x, "RM_sw1.dat");
+      cout << "GMRes" <<endl;
+      GMRes(An,bn,x0,epsilon,kmax,x,m, "GMR_sw1.dat");
+      break;
+      }
 
     default:
     cout << "Ce choix n’est pas possible ! Veuillez recommencer !" << endl;
