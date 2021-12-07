@@ -260,8 +260,81 @@ void ResMin_cond_gauche(Eigen::SparseMatrix<double> A, const Eigen::VectorXd b, 
   }
 }
 
+//sauvegarde de la solution
+void ResMin_cond_gauche(Eigen::SparseMatrix<double> A, const Eigen::VectorXd b, const Eigen::VectorXd x0, const double epsilon, const int kmax, Eigen::VectorXd & x, std::string file)
+{
 
-//------------------------------------------------Résidu minimum conditionné à gauche-------------------------------------
+  // Initialisation //
+
+  int m=A.rows();
+  VectorXd r(b.size()),z(b.size()), z1(b.size()), q(m), q1(m), w(m);
+  SparseMatrix<double> L(m,m), U(m,m), E(m,m), F(m,m), D(m,m), D_1(m,m);
+  SparseLU<SparseMatrix<double> , COLAMDOrdering<int> > solver;
+  double alpha;
+  ofstream flux;
+  flux.open(file);
+  flux << "# itération k  ;  norme r"<<endl;
+  r=b-A*x0;
+
+  // Création de M sous forme  de la décomposition LU //
+
+  for (int i=0; i<A.outerSize(); ++i)
+  {
+    for (SparseMatrix<double>::InnerIterator it(A,i); it; ++it)
+    {
+
+      if (it.row()==it.col())
+      {
+        D.coeffRef(it.row(),it.col()) = it.value();
+        D_1.coeffRef(it.row(),it.col()) = 1./it.value();
+      }
+      if (it.row()>it.col())
+      {
+        E.coeffRef(it.row(),it.col()) = -it.value();
+      }
+
+      if (it.row()<it.col())
+      {
+        F.coeffRef(it.row(),it.col()) = -it.value();
+      }
+    }
+  }
+  //cout<<"A="<<endl<<A<<endl;cout<<"D="<<endl<<D<<endl;cout<<"E="<<endl<<E<<endl;cout<<"F="<<endl<<F<<endl;
+  L = (D-E)*D_1; U = (D-F);
+  //cout<<L*U-(D-E)*D_1*(D-F)<<endl;
+  x = x0;
+  q1 = L.triangularView<Lower>().solve(r);
+  q = U.triangularView<Upper>().solve(q1);
+  //q = Resol_LU(L,U,r);
+
+  int k=0;
+
+  while ((r.norm()>epsilon) && (k<=kmax))
+  {
+    //cout<<"RM préconditionné à gauche, itération n°"<<k<<endl;
+    w = A*q;
+    //z = Resol_LU(L,U,w);
+    z1 = L.triangularView<Lower>().solve(w);
+    z = U.triangularView<Upper>().solve(z1);
+    alpha = q.dot(z)/z.dot(z);
+    x = x + alpha*q;
+    r = r - alpha*w;
+    q = q - alpha*z;
+    k += 1;
+    flux << k << " " << r.norm() <<endl;
+  }
+  flux.close();
+
+  cout<<"r ="<<r.norm()<<endl;
+  cout<<"Nombre d'itérations ="<<k<<endl;
+  if (k>kmax)
+  {
+    cout<<"Tolérance non atteinte: "<<endl;
+  }
+}
+
+
+//------------------------------------------------Résidu minimum conditionné à droite-------------------------------------
 
 
 void ResMin_cond_droite(Eigen::SparseMatrix<double> A, const Eigen::VectorXd b, const Eigen::VectorXd x0, const double epsilon, const int kmax, Eigen::VectorXd & x)
@@ -324,6 +397,72 @@ void ResMin_cond_droite(Eigen::SparseMatrix<double> A, const Eigen::VectorXd b, 
   }
 }
 
+//sauvegarde de solution
+void ResMin_cond_droite(Eigen::SparseMatrix<double> A, const Eigen::VectorXd b, const Eigen::VectorXd x0, const double epsilon, const int kmax, Eigen::VectorXd & x, std::string file)
+{
+  int m=A.rows();
+  VectorXd r(b.size()); r=b-A*x0;
+  VectorXd z(b.size()), z1(b.size());
+  VectorXd q(m);
+  VectorXd w(m);
+  double alpha;
+  SparseMatrix<double> L(m,m), U(m,m), E(m,m), F(m,m), D(m,m), D_1(m,m);
+   ofstream flux;
+  flux.open(file);
+  flux << "# itération k  ;  norme r"<<endl;
+  for (int i=0; i<A.outerSize(); ++i)
+  {
+    for (SparseMatrix<double>::InnerIterator it(A,i); it; ++it)
+    {
+
+      if (it.row()==it.col())
+      {
+        D.coeffRef(it.row(),it.col()) = it.value();
+        D_1.coeffRef(it.row(),it.col()) = 1./it.value();
+      }
+      if (it.row()>it.col())
+      {
+        E.coeffRef(it.row(),it.col()) = -it.value();
+      }
+
+      if (it.row()<it.col())
+      {
+        F.coeffRef(it.row(),it.col()) = -it.value();
+      }
+    }
+  }
+
+  L = (D-E)*D_1; U = (D-F);
+
+  x = x0;
+
+  int k=0;
+
+  while ((r.norm()>epsilon) && (k<=kmax))
+  {
+    //cout<<"RM préconditionné à gauche, itération n°"<<k<<endl;
+
+    //z = Resol_LU(L,U,r);
+    z1 = L.triangularView<Lower>().solve(r);
+    z = U.triangularView<Upper>().solve(z1);
+    w = A*z;
+    alpha = r.dot(w)/w.dot(w);
+    x = x + alpha*z;
+    r = r - alpha*w;
+
+    k += 1;
+    flux << k << " " << r.norm() <<endl;
+  }
+  flux.close();
+
+  cout<<"r ="<<r.norm()<<endl;
+  cout<<"Nombre d'itérations ="<<k<<endl;
+  if (k>kmax)
+  {
+    cout<<"Tolérance non atteinte: "<<endl;
+  }
+}
+
 //------------------------Résidu minimum préconditionné à droite flex----------------------------
 
 void ResMin_cond_droite_flex(Eigen::SparseMatrix<double> A, const Eigen::VectorXd b, const Eigen::VectorXd x0, const double epsilon, const int kmax, Eigen::VectorXd & x)
@@ -364,7 +503,51 @@ void ResMin_cond_droite_flex(Eigen::SparseMatrix<double> A, const Eigen::VectorX
   }
 }
 
+//sauvegarde solution
+void ResMin_cond_droite_flex(Eigen::SparseMatrix<double> A, const Eigen::VectorXd b, const Eigen::VectorXd x0, const double epsilon, const int kmax, Eigen::VectorXd & x, std::string file)
+{
+  int m=A.rows();
+  VectorXd r(b.size()); r=b-A*x0;
+  VectorXd z(b.size()), z1(b.size()), z0(b.size());
+  VectorXd q(m);
+  VectorXd w(m);
+  double alpha;
+  SparseMatrix<double> L(m,m), U(m,m), E(m,m), F(m,m), D(m,m), D_1(m,m);
 
+
+   ofstream flux;
+  flux.open(file);
+  flux << "# itération k  ;  norme r"<<endl;
+  x = x0;
+
+  int k=0;
+  z0.setZero();
+  while ((r.norm()>epsilon) && (k<=kmax))
+  {
+    //cout<<"RM préconditionné à gauche, itération n°"<<k<<endl;
+
+    //z = Resol_LU(L,U,r);
+    //z1 = L.triangularView<Lower>().solve(r);
+    //z = U.triangularView<Upper>().solve(z1);
+    ResMin (A,r,z0,epsilon,10,z);
+    z0=z;
+    w = A*z;
+    alpha = r.dot(w)/w.dot(w);
+    x = x + alpha*z;
+    r = r - alpha*w;
+
+    k += 1;
+    flux << k << " " << r.norm() <<endl;
+  }
+  flux.close();
+
+  cout<<"r ="<<r.norm()<<endl;
+  cout<<"Nombre d'itérations ="<<k<<endl;
+  if (k>kmax)
+  {
+    cout<<"Tolérance non atteinte: "<<endl;
+  }
+}
 
 //-------------------------------------GMRes-----------------------------------------------------
 
@@ -717,8 +900,92 @@ void GMRes_preconditionne(const Eigen::SparseMatrix<double> A, const Eigen::Vect
   }
 
 }
+//sauvegarde solution
+void GMRes_preconditionne(const Eigen::SparseMatrix<double> A, const Eigen::VectorXd b, const Eigen::VectorXd x0, const double epsilon, const int kmax, Eigen::VectorXd & x, const int m, std::string file)
+{
+  //Initialisation
+  int k=0;
+  VectorXd r(b.size()); r=b-A*x0;
+  VectorXd y(m); VectorXd u(x0.size()), x_intermediaire(x0.size());
+  double beta; beta=r.norm(); double gamma;
+  MatrixXd Hm(m,m); MatrixXd Vm(b.size(),m);MatrixXd Hm_barre(m+1,m);MatrixXd Vm_1(b.size(),m+1); MatrixXd Zm(b.size(),m);
+  vector<Eigen::MatrixXd> HmVm;
+  Eigen::MatrixXd Qm(m,m); Eigen::MatrixXd Rm(m,m); Eigen::MatrixXd Qm_barre(m+1,m+1);Eigen::MatrixXd Rm_barre(m+1,m);
+  Eigen::VectorXd gm_barre(m+1);Eigen::VectorXd gm(m);
+  SparseMatrix<double> L(A.rows(),A.rows()), U(A.rows(),A.rows()), E(A.rows(),A.rows()), F(A.rows(),A.rows()), D(A.rows(),A.rows()), D_1(A.rows(),A.rows());
+
+  ofstream flux;
+  flux.open(file);
+  flux << "# itération k  ;  norme r"<<endl;
+
+  for (int i=0; i<A.outerSize(); ++i)
+  {
+    for (SparseMatrix<double>::InnerIterator it(A,i); it; ++it)
+    {
+
+      if (it.row()==it.col())
+      {
+        D.coeffRef(it.row(),it.col()) = it.value();
+        D_1.coeffRef(it.row(),it.col()) = 1./it.value();
+      }
+      if (it.row()>it.col())
+      {
+        E.coeffRef(it.row(),it.col()) = -it.value();
+      }
+
+      if (it.row()<it.col())
+      {
+        F.coeffRef(it.row(),it.col()) = -it.value();
+      }
+    }
+  }
+
+  L = (D-E)*D_1; U = (D-F);
+
+  x=x0;
+
+  while ((beta>epsilon) && (k<=kmax))
+  {
+    HmVm = Arnoldi_2(A,L,U,r,m);
+    Hm = HmVm[0]; Vm = HmVm[2]; Hm_barre = HmVm[1]; Vm_1 = HmVm[3]; Zm = HmVm[4];
+    //cout<<"VmT*Vm="<<endl;
+    //cout<<Vm.transpose()*Vm<<endl;
+
+    //Givens(Hm,Qm,Rm);
+    GivensOpt(Hm_barre,Qm_barre,Rm_barre);
+
+    gm_barre = beta*(Qm_barre.transpose()).col(0);
+    //gamma = gm_barre[m];
+
+    for(int i=0;i<m;i++)
+    {
+      Rm.row(i) = Rm_barre.row(i); gm.row(i) = gm_barre.row(i);
+    }
+
+    resol_syst_triang_sup(Rm, y, gm);
+
+    x += Zm*y;
+
+    r = b-A*x;
+    //r = gamma*Vm_1*((Qm_barre.transpose()).col(m));
+
+    //beta = abs(gamma);
+    beta = r.norm();
+
+    k+=1;
+    flux << k << " " << r.norm() <<endl;
+  }
+  flux.close();
 
 
+  cout<<"r ="<<beta<<endl;
+  cout<<"Nombre d'itérations ="<<k<<endl;
+  if (k>kmax)
+  {
+    cout<<"Tolérance non atteinte: "<<endl;
+  }
+
+}
 //----------------------------------------Flex GMRes standard--------------------------------------------------------//
 std::vector<Eigen::MatrixXd> Arnoldi_3(const Eigen::SparseMatrix<double> A, Eigen::VectorXd & v, const int m)
 {
@@ -827,7 +1094,63 @@ void GMRes_flex(const Eigen::SparseMatrix<double> A, const Eigen::VectorXd b, co
 
 }
 
+//save solution
+void GMRes_flex(const Eigen::SparseMatrix<double> A, const Eigen::VectorXd b, const Eigen::VectorXd x0, const double epsilon, const int kmax, Eigen::VectorXd & x, const int m, std::string file)
+{
+  //Initialisation
+  int k=0;
+  VectorXd r(b.size()); r=b-A*x0;
+  VectorXd y(m); VectorXd u(x0.size()), x_intermediaire(x0.size());
+  double beta; beta=r.norm(); double gamma;
+  MatrixXd Hm(m,m); MatrixXd Vm(b.size(),m);MatrixXd Hm_barre(m+1,m);MatrixXd Vm_1(b.size(),m+1); MatrixXd Zm(b.size(),m);
+  vector<Eigen::MatrixXd> HmVm;
+  Eigen::MatrixXd Qm(m,m); Eigen::MatrixXd Rm(m,m); Eigen::MatrixXd Qm_barre(m+1,m+1);Eigen::MatrixXd Rm_barre(m+1,m);
+  Eigen::VectorXd gm_barre(m+1);Eigen::VectorXd gm(m);
+  SparseMatrix<double> L(A.rows(),A.rows()), U(A.rows(),A.rows()), E(A.rows(),A.rows()), F(A.rows(),A.rows()), D(A.rows(),A.rows()), D_1(A.rows(),A.rows());
 
+  ofstream flux;
+  flux.open(file);
+  flux << "# itération k  ;  norme r"<<endl;
+  x=x0;
+
+  while ((beta>epsilon) && (k<=kmax))
+  {
+    HmVm = Arnoldi_3(A,r,m);
+    Hm = HmVm[0]; Vm = HmVm[2]; Hm_barre = HmVm[1]; Vm_1 = HmVm[3]; Zm = HmVm[4];
+    //cout<<"VmT*Vm="<<endl;
+    //cout<<Vm.transpose()*Vm<<endl;
+
+    //Givens(Hm,Qm,Rm);
+    GivensOpt(Hm_barre,Qm_barre,Rm_barre);
+
+    gm_barre = beta*(Qm_barre.transpose()).col(0);
+    //gamma = gm_barre[m];
+
+    for(int i=0;i<m;i++)
+    {
+      Rm.row(i) = Rm_barre.row(i); gm.row(i) = gm_barre.row(i);
+    }
+
+    resol_syst_triang_sup(Rm, y, gm);
+
+    x += Zm*y;
+
+    r = b-A*x;
+
+    beta = r.norm();cout<<"Iteration GMRes flex"<<beta<<endl;
+
+    k+=1;
+    flux << k << " " << r.norm() <<endl;
+  }
+  flux.close();
+  cout<<"r ="<<beta<<endl;
+  cout<<"Nombre d'itérations ="<<k<<endl;
+  if (k>kmax)
+  {
+    cout<<"Tolérance non atteinte: "<<endl;
+  }
+
+}
 //------------------------------------------LECTURE MATRICES-------------------------------------------//
 
 SparseMatrix <double>  Lecture_Matrice_A (string fichier)
@@ -959,3 +1282,4 @@ SparseMatrix <double>  Lecture_Matrice_A_2 (string fichier)
     }
   flux_A.close();
   return A;
+}
